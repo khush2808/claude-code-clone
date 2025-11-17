@@ -6,6 +6,7 @@ import { conversationService } from './services/conversation.service';
 import { mcpService } from './services/mcp.service';
 import { webSearchService } from './services/web-search.service';
 import { CLIInterface } from './cli/interface';
+import { config } from './config';
 
 // Helper function to process user input
 async function processUserInput(
@@ -60,6 +61,32 @@ async function processUserInput(
   const historyLength = conversationHistory.length;
   const newMessages = result.messages.slice(historyLength);
 
+  // Track tool call results to show status inline in production mode
+  const toolCallResults = new Map<string, 'success' | 'error'>();
+  
+  // First pass: collect tool results to map them to tool calls
+  for (const msg of newMessages) {
+    if (msg instanceof ToolMessage) {
+      const toolCallId = (msg as any).tool_call_id || '';
+      const toolName = (msg as any).name || 'unknown';
+      let isError = false;
+      
+      try {
+        const result = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
+        if (result && result.error) {
+          isError = true;
+        }
+      } catch {
+        // If parsing fails, check if content indicates error
+        if (typeof msg.content === 'string' && msg.content.toLowerCase().includes('error')) {
+          isError = true;
+        }
+      }
+      
+      toolCallResults.set(toolCallId, isError ? 'error' : 'success');
+    }
+  }
+
   // Display all new messages including tool calls and results
   for (const msg of newMessages) {
     // Skip user messages (they're already shown in the prompt)
@@ -74,11 +101,17 @@ async function processUserInput(
         for (const toolCall of msg.tool_calls) {
           const toolCallAny = toolCall as any;
           const toolName = toolCallAny.function?.name || 'unknown';
+          const toolCallId = toolCallAny.id || '';
           const args = toolCallAny.function?.arguments
             ? JSON.parse(toolCallAny.function.arguments)
             : {};
           
-          cli.displayToolCall(toolName, args);
+          // In production mode, show status inline if available
+          const status = config.isProductionMode() 
+            ? toolCallResults.get(toolCallId) 
+            : undefined;
+          
+          cli.displayToolCall(toolName, args, status);
         }
       }
       
@@ -88,7 +121,7 @@ async function processUserInput(
       }
     }
 
-    // Display tool results
+    // Display tool results (only in debug mode)
     if (msg instanceof ToolMessage) {
       const toolName = (msg as any).name || 'unknown';
       let result: any;

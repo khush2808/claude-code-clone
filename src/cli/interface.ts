@@ -94,7 +94,8 @@ export class CLIInterface {
   }
 
   // Display tool call (when AI decides to use a tool)
-  displayToolCall(toolName: string, args: any): void {
+  // In production mode, status can be 'success' or 'error' to show inline
+  displayToolCall(toolName: string, args: any, status?: 'success' | 'error'): void {
     // Format args in a readable way
     let argsStr = '';
     if (typeof args === 'object' && args !== null) {
@@ -124,12 +125,30 @@ export class CLIInterface {
       argsStr = argsStr.substring(0, 147) + '...';
     }
     
-    console.log(chalk.hex('#CD6F47')('Tool Call:'), `${toolName}${argsStr}`);
+    // In production mode, show status inline with tool call
+    if (config.isProductionMode() && status) {
+      const statusIcon = status === 'success' ? '✓' : '✗';
+      const statusColor = status === 'success' ? chalk.green : chalk.red;
+      console.log(
+        chalk.hex('#CD6F47')('Tool Call:'), 
+        `${toolName}${argsStr}`,
+        statusColor(`[${statusIcon} ${status}]`)
+      );
+    } else {
+      // Debug mode: just show tool call
+      console.log(chalk.hex('#CD6F47')('Tool Call:'), `${toolName}${argsStr}`);
+    }
     console.log(); // Empty line for spacing
   }
 
   // Display tool result (when tool execution completes)
+  // Only shown in debug mode
   displayToolResult(toolName: string, result: any, isError: boolean = false): void {
+    // Only show tool results in debug mode
+    if (!config.isDebugMode()) {
+      return;
+    }
+    
     // Format result content
     let resultStr = '';
     if (isError) {
