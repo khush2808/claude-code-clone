@@ -92,6 +92,37 @@ export class CLIInterface {
     console.log(colors[status](`${icons[status]} ${messages[status]}`));
   }
 
+  // Display tool call (when AI decides to use a tool)
+  displayToolCall(toolName: string, args: any): void {
+    const argsStr = typeof args === 'object' 
+      ? JSON.stringify(args, null, 2).substring(0, 200) + (JSON.stringify(args).length > 200 ? '...' : '')
+      : String(args).substring(0, 200);
+    
+    console.log(
+      chalk.hex('#CD6F47')('🔧 Tool Call:') + 
+      chalk.cyan(` ${toolName}`) +
+      chalk.gray(`\n   Args: ${argsStr}`)
+    );
+  }
+
+  // Display tool result (when tool execution completes)
+  displayToolResult(toolName: string, result: any, isError: boolean = false): void {
+    const resultStr = typeof result === 'string'
+      ? result.substring(0, 300) + (result.length > 300 ? '...' : '')
+      : typeof result === 'object'
+      ? JSON.stringify(result, null, 2).substring(0, 300) + (JSON.stringify(result).length > 300 ? '...' : '')
+      : String(result).substring(0, 300);
+    
+    const icon = isError ? '✗' : '✓';
+    const color = isError ? chalk.red : chalk.green;
+    
+    console.log(
+      color(`${icon} Tool Result:`) +
+      chalk.cyan(` ${toolName}`) +
+      chalk.gray(`\n   ${resultStr}`)
+    );
+  }
+
   // Display available commands
   displayHelp(): void {
     console.log(chalk.bold('\nAvailable commands:'));
