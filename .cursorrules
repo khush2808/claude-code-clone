@@ -1,0 +1,45 @@
+# Claude Code Assistant - Cursor Rules
+
+## Package Manager
+- **ALWAYS use Bun** - This project uses Bun, NOT npm or yarn
+- Use `bun install` to install packages
+- Use `bun run <script>` to run scripts
+- Never create or commit `package-lock.json` (Bun uses `bun.lockb`)
+
+## Runtime & Build
+- Runtime: Bun
+- Build tool: TypeScript compiler (`tsc`)
+- Development: Run with `bun src/index.ts` (no build needed)
+- Production: Build with `tsc`, then run `bun dist/index.js`
+
+## Project Structure
+- Main entry: `src/index.ts`
+- Agent logic: `src/agent/`
+- Services: `src/services/`
+- CLI interface: `src/cli/interface.ts`
+- Database: Prisma ORM with PostgreSQL
+
+## Key Technologies
+- **AI Model**: Google Gemini 2.5 Flash
+- **Framework**: LangGraph for agent orchestration
+- **Protocol**: Model Context Protocol (MCP) for tool integration
+- **Terminal UI**: Chalk for colors, Ora for spinners, marked-terminal for markdown rendering
+
+## Important Notes
+- Markdown rendering uses `marked.parse()` (not `marked()`)
+- Never run `npm run build` - user preference
+- Don't run git or rm commands unless explicitly mentioned
+- Don't touch .env files (read or write)
+- When encoding/typing issues occur (like `[~200`), rerun the command
+
+## Code Style
+- TypeScript with strict typing
+- Use async/await for async operations
+- Error handling with try-catch blocks
+- Prefer descriptive variable names
+
+## API Keys Required
+- `GEMINI_API_KEY` - Required for AI functionality
+- `GITHUB_TOKEN` - Optional, for GitHub integration
+- `TAVILY_API_KEY` - Optional, for web search (free tier available)
+
