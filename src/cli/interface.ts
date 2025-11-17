@@ -1,6 +1,8 @@
 import chalk from 'chalk';
 import ora, { Ora } from 'ora';
 import * as readline from 'readline';
+import { marked } from 'marked';
+import { markedTerminal } from 'marked-terminal';
 import { config } from '../config';
 
 export class CLIInterface {
@@ -8,6 +10,8 @@ export class CLIInterface {
 
   constructor() {
     this.spinner = ora();
+    // Configure marked to use terminal renderer
+    marked.use(markedTerminal());
   }
 
   // Display welcome message
@@ -61,9 +65,17 @@ export class CLIInterface {
     this.spinner.stop();
   }
 
-  // Display AI response
+  // Display AI response with markdown rendering
   displayResponse(message: string): void {
-    console.log(chalk.hex('#CD6F47')('Claude:'), message);
+    console.log(chalk.hex('#CD6F47')('Claude:'));
+    // Render markdown to terminal
+    try {
+      const rendered = marked.parse(message);
+      console.log(rendered);
+    } catch (error) {
+      // Fallback to plain text if markdown parsing fails
+      console.log(message);
+    }
     console.log(); // Empty line for spacing
   }
 

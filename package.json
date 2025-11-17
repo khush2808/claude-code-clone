@@ -27,6 +27,8 @@
     "@prisma/client": "^6.1.0",
     "chalk": "^4.1.2",
     "dotenv": "^16.4.7",
+    "marked": "^15.0.12",
+    "marked-terminal": "^7.3.0",
     "ora": "^5.4.1",
     "tavily": "^1.0.2"
   },
