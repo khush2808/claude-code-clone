@@ -33,7 +33,7 @@ async function processUserInput(
   // Process user message through the agent
   cli.displayThinking();
 
-  // Load previous conversation history from database (last 10 messages to stay within context limits)
+  // Load previous conversation history from in-memory storage (last 10 messages to stay within context limits)
   const conversationHistory = await conversationService.getConversationMessages(
     conversation.id,
     10
@@ -89,8 +89,17 @@ async function main() {
   cli.displayWelcome();
 
   try {
-    await conversationService.createConversation('system-test');
-    console.log(chalk.hex('#CD6F47')('✓') + chalk.gray(' Database connected'));
+    // Check database availability (optional, for future features)
+    const { isDatabaseAvailable } = await import('./db/prisma');
+    const dbAvailable = await isDatabaseAvailable();
+    if (dbAvailable) {
+      console.log(chalk.hex('#CD6F47')('✓') + chalk.gray(' Database connected (for resume/dashboard features)'));
+    } else {
+      console.log(
+        chalk.yellow('○') +
+          chalk.gray(' Database not available (using in-memory storage only)')
+      );
+    }
 
     // Connect to MCP servers
     console.log(chalk.gray('Connecting to MCP servers...'));
