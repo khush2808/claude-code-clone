@@ -1,11 +1,12 @@
 import 'dotenv/config';
 import chalk from 'chalk';
-import { HumanMessage, AIMessage } from '@langchain/core/messages';
+import { HumanMessage, AIMessage, ToolMessage } from '@langchain/core/messages';
 import { graph } from './agent/graph';
 import { conversationService } from './services/conversation.service';
 import { mcpService } from './services/mcp.service';
 import { webSearchService } from './services/web-search.service';
 import { CLIInterface } from './cli/interface';
+import { config } from './config';
 
 // Helper function to process user input
 async function processUserInput(
@@ -33,7 +34,7 @@ async function processUserInput(
   // Process user message through the agent
   cli.displayThinking();
 
-  // Load previous conversation history from database (last 10 messages to stay within context limits)
+  // Load previous conversation history from in-memory storage (last 10 messages to stay within context limits)
   const conversationHistory = await conversationService.getConversationMessages(
     conversation.id,
     10
@@ -55,27 +56,115 @@ async function processUserInput(
 
   cli.stopThinking();
 
-  // Find the final AI response (last AIMessage that's not empty)
-  let finalResponse = '';
-  for (let i = result.messages.length - 1; i >= 0; i--) {
-    const msg = result.messages[i];
-    if (
-      msg instanceof AIMessage &&
-      msg.content &&
-      typeof msg.content === 'string' &&
-      msg.content.trim().length > 0
-    ) {
-      finalResponse = msg.content;
-      break;
+  // Get only the new messages (those added during this execution)
+  // We'll show messages that weren't in the initial conversation history
+  const historyLength = conversationHistory.length;
+  const newMessages = result.messages.slice(historyLength);
+
+  // Track tool call results to show status inline in production mode
+  const toolCallResults = new Map<string, 'success' | 'error'>();
+  
+  // First pass: collect tool results to map them to tool calls
+  for (const msg of newMessages) {
+    if (msg instanceof ToolMessage) {
+      const toolCallId = (msg as any).tool_call_id || '';
+      const toolName = (msg as any).name || 'unknown';
+      let isError = false;
+      
+      try {
+        const result = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
+        if (result && result.error) {
+          isError = true;
+        }
+      } catch {
+        // If parsing fails, check if content indicates error
+        if (typeof msg.content === 'string' && msg.content.toLowerCase().includes('error')) {
+          isError = true;
+        }
+      }
+      
+      toolCallResults.set(toolCallId, isError ? 'error' : 'success');
     }
   }
 
-  if (finalResponse) {
-    cli.displayResponse(finalResponse);
-  } else {
-    cli.displayResponse(
-      'I processed your request but have no response to show.'
-    );
+  // Display all new messages including tool calls and results
+  for (const msg of newMessages) {
+    // Skip user messages (they're already shown in the prompt)
+    if (msg instanceof HumanMessage) {
+      continue;
+    }
+
+    // Display AI messages with tool calls
+    if (msg instanceof AIMessage) {
+      // If this message has tool calls, display them
+      if (msg.tool_calls && msg.tool_calls.length > 0) {
+        for (const toolCall of msg.tool_calls) {
+          const toolCallAny = toolCall as any;
+          const toolName = toolCallAny.function?.name || 'unknown';
+          const toolCallId = toolCallAny.id || '';
+          const args = toolCallAny.function?.arguments
+            ? JSON.parse(toolCallAny.function.arguments)
+            : {};
+          
+          // In production mode, show status inline if available
+          const status = config.isProductionMode() 
+            ? toolCallResults.get(toolCallId) 
+            : undefined;
+          
+          cli.displayToolCall(toolName, args, status);
+        }
+      }
+      
+      // Display text content if present
+      if (msg.content && typeof msg.content === 'string' && msg.content.trim().length > 0) {
+        cli.displayResponse(msg.content);
+      }
+    }
+
+    // Display tool results (only in debug mode)
+    if (msg instanceof ToolMessage) {
+      const toolName = (msg as any).name || 'unknown';
+      let result: any;
+      let isError = false;
+      
+      try {
+        result = typeof msg.content === 'string' ? JSON.parse(msg.content) : msg.content;
+        if (result && result.error) {
+          isError = true;
+          result = result.error;
+        }
+      } catch {
+        result = msg.content;
+      }
+      
+      cli.displayToolResult(toolName, result, isError);
+    }
+  }
+
+  // If no messages were displayed, show a fallback
+  if (newMessages.length === 0 || newMessages.every(m => m instanceof HumanMessage)) {
+    // Find the final AI response (last AIMessage that's not empty)
+    let finalResponse = '';
+    for (let i = result.messages.length - 1; i >= 0; i--) {
+      const msg = result.messages[i];
+      if (
+        msg instanceof AIMessage &&
+        msg.content &&
+        typeof msg.content === 'string' &&
+        msg.content.trim().length > 0
+      ) {
+        finalResponse = msg.content;
+        break;
+      }
+    }
+
+    if (finalResponse) {
+      cli.displayResponse(finalResponse);
+    } else {
+      cli.displayResponse(
+        'I processed your request but have no response to show.'
+      );
+    }
   }
 
   return 'continue';
@@ -89,8 +178,17 @@ async function main() {
   cli.displayWelcome();
 
   try {
-    await conversationService.createConversation('system-test');
-    console.log(chalk.hex('#CD6F47')('✓') + chalk.gray(' Database connected'));
+    // Check database availability (optional, for future features)
+    const { isDatabaseAvailable } = await import('./db/prisma');
+    const dbAvailable = await isDatabaseAvailable();
+    if (dbAvailable) {
+      console.log(chalk.hex('#CD6F47')('✓') + chalk.gray(' Database connected (for resume/dashboard features)'));
+    } else {
+      console.log(
+        chalk.yellow('○') +
+          chalk.gray(' Database not available (using in-memory storage only)')
+      );
+    }
 
     // Connect to MCP servers
     console.log(chalk.gray('Connecting to MCP servers...'));
