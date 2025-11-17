@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "bun dist/index.js",
-    "dev": "bun --hot src/index.ts",
+    "dev": "bun src/index.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev"
   },
