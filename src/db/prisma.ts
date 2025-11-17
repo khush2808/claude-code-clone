@@ -14,7 +14,7 @@ export function getPrismaClient(): PrismaClient | null {
   if (!prisma) {
     try {
       prisma = new PrismaClient({
-        log: ['error'],
+        // log: ['error'],
       });
     } catch (error) {
       // If Prisma fails to initialize, return null
