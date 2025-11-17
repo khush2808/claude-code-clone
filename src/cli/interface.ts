@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import ora, { Ora } from 'ora';
 import * as readline from 'readline';
+import { config } from '../config';
 
 export class CLIInterface {
   private spinner: Ora;
@@ -94,33 +95,61 @@ export class CLIInterface {
 
   // Display tool call (when AI decides to use a tool)
   displayToolCall(toolName: string, args: any): void {
-    const argsStr = typeof args === 'object' 
-      ? JSON.stringify(args, null, 2).substring(0, 200) + (JSON.stringify(args).length > 200 ? '...' : '')
-      : String(args).substring(0, 200);
+    // Format args in a readable way
+    let argsStr = '';
+    if (typeof args === 'object' && args !== null) {
+      // Format as key-value pairs for readability
+      const entries = Object.entries(args);
+      if (entries.length === 0) {
+        argsStr = '()';
+      } else {
+        const formattedArgs = entries
+          .map(([key, value]) => {
+            const valStr = typeof value === 'string' 
+              ? `"${value}"` 
+              : JSON.stringify(value);
+            return `${key}: ${valStr}`;
+          })
+          .join(', ');
+        argsStr = `(${formattedArgs})`;
+      }
+    } else if (args !== undefined && args !== null) {
+      argsStr = `(${String(args)})`;
+    } else {
+      argsStr = '()';
+    }
     
-    console.log(
-      chalk.hex('#CD6F47')('🔧 Tool Call:') + 
-      chalk.cyan(` ${toolName}`) +
-      chalk.gray(`\n   Args: ${argsStr}`)
-    );
+    // Truncate if too long
+    if (argsStr.length > 150) {
+      argsStr = argsStr.substring(0, 147) + '...';
+    }
+    
+    console.log(chalk.hex('#CD6F47')('Tool Call:'), `${toolName}${argsStr}`);
+    console.log(); // Empty line for spacing
   }
 
   // Display tool result (when tool execution completes)
   displayToolResult(toolName: string, result: any, isError: boolean = false): void {
-    const resultStr = typeof result === 'string'
-      ? result.substring(0, 300) + (result.length > 300 ? '...' : '')
-      : typeof result === 'object'
-      ? JSON.stringify(result, null, 2).substring(0, 300) + (JSON.stringify(result).length > 300 ? '...' : '')
-      : String(result).substring(0, 300);
+    // Format result content
+    let resultStr = '';
+    if (isError) {
+      resultStr = `Error: ${typeof result === 'string' ? result : JSON.stringify(result)}`;
+    } else if (typeof result === 'string') {
+      resultStr = result;
+    } else if (typeof result === 'object' && result !== null) {
+      // Try to format object nicely
+      resultStr = JSON.stringify(result, null, 2);
+    } else {
+      resultStr = String(result);
+    }
     
-    const icon = isError ? '✗' : '✓';
-    const color = isError ? chalk.red : chalk.green;
+    // Truncate if too long
+    if (resultStr.length > 500) {
+      resultStr = resultStr.substring(0, 497) + '...';
+    }
     
-    console.log(
-      color(`${icon} Tool Result:`) +
-      chalk.cyan(` ${toolName}`) +
-      chalk.gray(`\n   ${resultStr}`)
-    );
+    console.log(chalk.hex('#CD6F47')('Tool Result:'), resultStr);
+    console.log(); // Empty line for spacing
   }
 
   // Display available commands
