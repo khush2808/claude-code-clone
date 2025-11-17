@@ -10,8 +10,51 @@ export class CLIInterface {
 
   constructor() {
     this.spinner = ora();
-    // Configure marked to use terminal renderer
-    marked.use(markedTerminal());
+    // Configure marked to use terminal renderer with enhanced options
+    const terminalWidth = process.stdout.columns || 120;
+    marked.use(
+      markedTerminal({
+        width: terminalWidth,
+        reflowText: true,
+        tab: 2,
+        colors: {
+          heading: chalk.hex('#CD6F47'),
+          code: chalk.cyan,
+          codespan: chalk.cyan.bgGray,
+          blockquote: chalk.gray,
+          strong: chalk.bold.white,
+          em: chalk.italic,
+          link: chalk.blue.underline,
+          list: chalk.white,
+          table: chalk.white,
+          del: chalk.strikethrough.gray,
+        },
+        tableOptions: {
+          chars: {
+            top: '─',
+            'top-mid': '┬',
+            'top-left': '┌',
+            'top-right': '┐',
+            bottom: '─',
+            'bottom-mid': '┴',
+            'bottom-left': '└',
+            'bottom-right': '┘',
+            left: '│',
+            'left-mid': '├',
+            mid: '─',
+            'mid-mid': '┼',
+            right: '│',
+            'right-mid': '┤',
+            middle: '│',
+          },
+          style: {
+            'padding-left': 1,
+            'padding-right': 1,
+          },
+        },
+        sectionPrefixes: false,
+      })
+    );
   }
 
   // Display welcome message
