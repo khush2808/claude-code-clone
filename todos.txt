@@ -1,0 +1,4 @@
+-see what can be done about the markdown and ui in general
+-db/sessions/webview/shares
+-npm config and publish first. 
+-
