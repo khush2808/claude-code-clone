@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import 'dotenv/config';
 import chalk from 'chalk';
 import { HumanMessage, AIMessage, ToolMessage } from '@langchain/core/messages';

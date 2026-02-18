@@ -29,7 +29,26 @@ export class CLIInterface {
     console.log(
       chalk.gray('AI-powered coding assistant with MCP tool support')
     );
-    console.log(chalk.gray("Type your questions or '/exit' to quit\n"));
+    console.log(chalk.gray("Type your questions or '/exit' to quit"));
+    console.log();
+
+    // Show env var setup instructions
+    const missingKeys: string[] = [];
+    if (!process.env.GEMINI_API_KEY)   missingKeys.push('GEMINI_API_KEY');
+    if (!process.env.TAVILY_API_KEY)   missingKeys.push('TAVILY_API_KEY');
+    if (!process.env.GITHUB_TOKEN)     missingKeys.push('GITHUB_TOKEN');
+
+    if (missingKeys.length > 0) {
+      console.log(chalk.yellow('⚠  Some environment variables are not set. Create a .env file in your working directory:'));
+      console.log(chalk.gray('─'.repeat(60)));
+      console.log(chalk.cyan('  GEMINI_API_KEY') + chalk.gray('   = your key from https://aistudio.google.com/apikey'));
+      console.log(chalk.cyan('  TAVILY_API_KEY') + chalk.gray('   = your key from https://tavily.com  (web search)'));
+      console.log(chalk.cyan('  GITHUB_TOKEN') + chalk.gray('     = your token from https://github.com/settings/tokens'));
+      console.log(chalk.cyan('  DATABASE_URL') + chalk.gray('      = (optional) PostgreSQL URL for conversation history'));
+      console.log(chalk.gray('─'.repeat(60)));
+      console.log(chalk.yellow('  Missing right now: ') + chalk.red(missingKeys.join(', ')));
+      console.log();
+    }
   }
 
   async promptUser(): Promise<string> {

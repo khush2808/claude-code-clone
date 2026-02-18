@@ -1,8 +1,20 @@
 {
-  "name": "claude-code-assistant",
+  "name": "clawd-code",
   "version": "1.0.0",
   "description": "AI-powered coding assistant using Gemini, LangGraph, and MCP",
   "main": "dist/index.js",
+  "bin": {
+    "clawd-code": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "prisma"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "build": "tsc",
     "start": "bun dist/index.js",
