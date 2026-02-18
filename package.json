@@ -29,8 +29,19 @@
     "mcp",
     "langgraph"
   ],
-  "author": "",
+  "author": {
+    "name": "Khush Shah",
+    "url": "https://github.com/khush2808"
+  },
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/khush2808/claude-code-clone.git"
+  },
+  "homepage": "https://github.com/khush2808/claude-code-clone#readme",
+  "bugs": {
+    "url": "https://github.com/khush2808/claude-code-clone/issues"
+  },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
     "@langchain/core": "^0.3.24",
