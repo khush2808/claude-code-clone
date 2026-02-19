@@ -1,5 +1,5 @@
 {
-  "name": "clawd-code",
+  "name": "claude-code-clone",
   "version": "1.0.0",
   "description": "AI-powered coding assistant using Gemini, LangGraph, and MCP",
   "main": "dist/index.js",

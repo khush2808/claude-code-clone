@@ -1,0 +1,7 @@
+src/
+.env
+.env.example
+bun.lock
+docker-compose.yml
+.cursorrules
+tsconfig.json
