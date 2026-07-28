@@ -259,7 +259,6 @@ This project is licensed under the [MIT License] (LICENSE.md).
 so feel free to use and create your own creations :).
 
 ## 🙏 Acknowledgments
-- Special thanks to [pankajkumardev](https://github.com/pankajkumardev) for the inspiration and idea
 - **Gemini API** by Google
 - **LangGraph.js** for agent orchestration
 - **Model Context Protocol** for tool integration

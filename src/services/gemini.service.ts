@@ -17,7 +17,7 @@ export class GeminiService {
   constructor() {
     this.client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     this.model = this.client.getGenerativeModel({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash-lite',
       safetySettings: [
         {
           category: HarmCategory.HARM_CATEGORY_HARASSMENT,
@@ -55,7 +55,7 @@ export class GeminiService {
       let modelToUse = this.model;
       if (geminiTools.length > 0) {
         modelToUse = this.client.getGenerativeModel({
-          model: 'gemini-2.5-flash',
+          model: 'gemini-3.5-flash-lite',
           tools: geminiTools,
           safetySettings: [
             {
@@ -182,7 +182,9 @@ Be direct, use tools proactively, and complete tasks efficiently.`,
           parts,
         });
       } else if (message instanceof ToolMessage) {
-        // Function response - must have role 'function' not 'user' for Gemini
+        // Gemini represents function responses as a user turn containing a
+        // functionResponse part. The legacy "function" role is rejected by
+        // Gemini 3-series models.
         const toolMsg = message as any;
         let responseContent;
 
@@ -199,7 +201,7 @@ Be direct, use tools proactively, and complete tasks efficiently.`,
         }
 
         geminiMessages.push({
-          role: 'function',
+          role: 'user',
           parts: [
             {
               functionResponse: {
@@ -237,18 +239,45 @@ Be direct, use tools proactively, and complete tasks efficiently.`,
 
   /**
    * Clean JSON Schema to match Gemini's expectations
-   * Removes: $schema, additionalProperties, and other non-standard fields
+   * Gemini accepts a subset of OpenAPI 3.0 rather than full JSON Schema.
    */
   private cleanJsonSchema(schema: any): any {
     if (!schema || typeof schema !== 'object') {
       return { type: 'object', properties: {} };
     }
 
+    const declaredTypes = Array.isArray(schema.type)
+      ? schema.type
+      : schema.type
+        ? [schema.type]
+        : [];
+    const nullable = declaredTypes.includes('null') || schema.nullable === true;
+    const nonNullType = declaredTypes.find((type: unknown) => type !== 'null');
+    const supportedTypes = new Set([
+      'string',
+      'number',
+      'integer',
+      'boolean',
+      'array',
+      'object',
+    ]);
+    const inferredType = schema.properties
+      ? 'object'
+      : schema.items
+        ? 'array'
+        : 'string';
+
     const cleaned: any = {
-      type: schema.type || 'object',
+      type:
+        typeof nonNullType === 'string' && supportedTypes.has(nonNullType)
+          ? nonNullType
+          : inferredType,
     };
 
-    // Copy allowed fields
+    if (nullable) {
+      cleaned.nullable = true;
+    }
+
     if (schema.properties) {
       cleaned.properties = {};
       for (const [key, value] of Object.entries(schema.properties)) {
@@ -268,9 +297,19 @@ Be direct, use tools proactively, and complete tasks efficiently.`,
       cleaned.description = schema.description;
     }
 
-    if (schema.enum) {
+    // Gemini's Schema enum is string[]; numeric/boolean JSON Schema enums
+    // must be omitted instead of changing the tool's expected argument type.
+    if (
+      Array.isArray(schema.enum) &&
+      schema.enum.every((value: unknown) => typeof value === 'string')
+    ) {
       cleaned.enum = schema.enum;
     }
+
+    if (schema.format) {
+      cleaned.format = schema.format;
+    }
+
     return cleaned;
   }
 }

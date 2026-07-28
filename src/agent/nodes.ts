@@ -5,6 +5,7 @@ import { mcpService } from '../services/mcp.service';
 import { webSearchService } from '../services/web-search.service';
 import { AgentState } from './state';
 import chalk from 'chalk';
+import { logger } from '../utils/logger';
 
 
  // User Input Node - Processes user input and saves to database
@@ -42,6 +43,12 @@ export async function modelNode(
     if (webSearchService.isAvailable()) {
       availableTools.push(webSearchService.getToolDefinition());
     }
+
+    logger.log('modelNode request', {
+      conversationId: state.conversationId,
+      messageCount: state.messages.length,
+      toolCount: availableTools.length,
+    });
 
     // Get working directory from metadata
     const workingDirectory = state.metadata?.workingDirectory || process.cwd();
@@ -92,11 +99,23 @@ export async function modelNode(
     // Save the AI message to database
     await conversationService.saveMessages(state.conversationId, [newMessage]);
 
+    logger.log('modelNode response', {
+      conversationId: state.conversationId,
+      stopReason: response.stop_reason,
+      functionCallCount: response.function_calls?.length || 0,
+      hasText: response.content.length > 0,
+    });
+
     return {
       messages: [newMessage],
       shouldContinue,
     };
   } catch (error) {
+    logger.error('modelNode failed', error, {
+      conversationId: state.conversationId,
+      messageCount: state.messages.length,
+    });
+
     // Return error message
     const errorMessage = new AIMessage({
       content: 'Sorry, I encountered an error while processing your request.',
