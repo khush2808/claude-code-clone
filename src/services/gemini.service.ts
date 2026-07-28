@@ -78,10 +78,11 @@ export class GeminiService {
         });
       }
 
-      // Start chat session
-      const chat = modelToUse.startChat({
-        history: geminiMessages.slice(0, -1), // All messages except the last one
-        // systemInstruction should be an object with parts array, not a string
+      // Use generateContent directly instead of the deprecated SDK's chat
+      // helper. That helper rewrites functionResponse turns to the legacy
+      // "function" role, which Gemini 3-series models reject.
+      const result = await modelToUse.generateContent({
+        contents: geminiMessages,
         systemInstruction: {
           role: 'system',
           parts: [
@@ -124,20 +125,18 @@ Be direct, use tools proactively, and complete tasks efficiently.`,
         },
       });
 
-      // Send the last message
-      const lastMessage = geminiMessages[geminiMessages.length - 1];
-      const result = await chat.sendMessage(lastMessage.parts);
-
       // Parse the response
       const response = result.response;
       const text = response.text();
 
       // Check for function calls
       const functionCalls = response.functionCalls();
+      const modelParts = response.candidates?.[0]?.content?.parts || [];
 
       return {
         content: text ? [{ type: 'text', text }] : [],
         function_calls: functionCalls || [],
+        model_parts: modelParts,
         stop_reason:
           functionCalls && functionCalls.length > 0 ? 'tool_use' : 'end_turn',
       };
@@ -157,6 +156,16 @@ Be direct, use tools proactively, and complete tasks efficiently.`,
           parts: [{ text: message.content }],
         });
       } else if (message instanceof AIMessage) {
+        const preservedParts = (message.additional_kwargs as any)
+          ?.gemini_parts;
+        if (Array.isArray(preservedParts) && preservedParts.length > 0) {
+          geminiMessages.push({
+            role: 'model',
+            parts: preservedParts,
+          });
+          continue;
+        }
+
         const parts: any[] = [];
 
         // Add text content

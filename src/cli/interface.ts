@@ -10,8 +10,16 @@ export class CLIInterface {
 
   constructor() {
     this.spinner = ora();
-    // Configure marked to use terminal renderer
-    marked.use(markedTerminal());
+    // Render Markdown for the current terminal width so paragraphs, lists,
+    // tables, and code blocks do not wrap at marked-terminal's fixed default.
+    marked.use(
+      markedTerminal({
+        width: Math.max(40, (process.stdout.columns || 80) - 2),
+        reflowText: true,
+        showSectionPrefix: false,
+        tab: 2,
+      })
+    );
   }
 
   // Display welcome message
@@ -89,8 +97,8 @@ export class CLIInterface {
     console.log(chalk.hex('#CD6F47')('Claude:'));
     // Render markdown to terminal
     try {
-      const rendered = marked.parse(message);
-      console.log(rendered);
+      const rendered = marked.parse(message) as string;
+      process.stdout.write(`${rendered.trimEnd()}\n`);
     } catch (error) {
       // Fallback to plain text if markdown parsing fails
       console.log(message);

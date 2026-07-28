@@ -84,6 +84,9 @@ export async function modelNode(
       newMessage = new AIMessage({
         content: response.content.length > 0 ? response.content[0].text : '',
         tool_calls: toolCalls,
+        additional_kwargs: {
+          gemini_parts: response.model_parts,
+        },
       });
 
       shouldContinue = true;
@@ -92,7 +95,12 @@ export async function modelNode(
       const textContent =
         response.content.length > 0 ? response.content[0].text : '';
 
-      newMessage = new AIMessage({ content: textContent });
+      newMessage = new AIMessage({
+        content: textContent,
+        additional_kwargs: {
+          gemini_parts: response.model_parts,
+        },
+      });
       shouldContinue = false;
     }
 
